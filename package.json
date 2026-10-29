@@ -1,7 +1,7 @@
 {
   "name": "dsh-session-date",
-  "version": "0.1.0",
-  "description": "DSH web GUI plugin: show the sidebar session date (e.g. 10月29日) instead of relative ages like 3天.",
+  "version": "0.2.0",
+  "description": "DSH web GUI plugin: calendar dates in the sidebar, with a date-view panel for first/last date, date sorting, and date-range filtering.",
   "type": "module",
   "main": "lib/index.js",
   "exports": {
