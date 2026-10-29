@@ -14,7 +14,7 @@ Sessions outside the current year include the year (`2025年10月29日`); the En
 ## Features
 
 - **Inline dates**: every session row ends with a calendar day (last activity by default, switchable to first conversation).
-- **Workspace picker search**: opening the new-session workspace menu adds a search field at the top. Typing filters the list to matching workspaces; pressing `Enter` switches to the first match (an exact label wins). With no match the field's underline turns orange and `Enter` does nothing.
+- **Workspace picker search**: opening the new-session workspace menu adds a search field at the top. Typing filters the list to matching workspaces. `↑`/`↓` move the highlight, `Home`/`End` jump to the first/last match, and `Enter` switches to the highlighted row (or, when nothing is highlighted, the exact label, then the first match). With no match the field's underline turns orange and `Enter` does nothing.
 - **Date view panel**: the calendar button in the sidebar header, left of the native view-options sliders.
   - Show date: `Last activity` / `First message`
   - Sort by date: `Default (sidebar order)` / `Date: newest first` / `Date: oldest first`
