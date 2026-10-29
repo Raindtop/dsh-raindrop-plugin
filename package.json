@@ -17,6 +17,10 @@
     "README.zh.md",
     "LICENSE"
   ],
+  "author": "raindrop",
+  "scripts": {
+    "prepublishOnly": "node --check lib/index.js && node --check lib/client.js"
+  },
   "dsh": {
     "bundle": {
       "patch": "./cordis.patch.yml"
