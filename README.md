@@ -1,6 +1,6 @@
 # dsh-session-date
 
-A DSH web GUI plugin that shows each sidebar session's **calendar day** instead of a relative age ("just now / 5 min / 3 days"), plus a **Date view** panel in the sidebar header: pick which date the row shows, sort by date, and filter by date range.
+A DSH web GUI plugin that shows each sidebar session's **calendar day** instead of a relative age ("just now / 5 min / 3 days"), plus a **Date view** panel in the sidebar header (pick which date the row shows, sort by date, filter by date range) and a **search field in the new-session workspace picker**.
 
 ![Sidebar date view](docs/preview.png)
 
@@ -14,6 +14,7 @@ Sessions outside the current year include the year (`2025年10月29日`); the En
 ## Features
 
 - **Inline dates**: every session row ends with a calendar day (last activity by default, switchable to first conversation).
+- **Workspace picker search**: opening the new-session workspace menu adds a search field at the top. Typing filters the list to matching workspaces; pressing `Enter` switches to the first match (an exact label wins). With no match the field's underline turns orange and `Enter` does nothing.
 - **Date view panel**: the calendar button in the sidebar header, left of the native view-options sliders.
   - Show date: `Last activity` / `First message`
   - Sort by date: `Default (sidebar order)` / `Date: newest first` / `Date: oldest first`

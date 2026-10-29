@@ -1,7 +1,7 @@
 {
   "name": "dsh-session-date",
-  "version": "0.2.0",
-  "description": "DSH web GUI plugin: calendar dates in the sidebar, with a date-view panel for first/last date, date sorting, and date-range filtering.",
+  "version": "0.3.0",
+  "description": "DSH web GUI plugin: calendar dates in the sidebar, a date-view panel (first/last date, date sorting, range filtering), and a searchable workspace picker.",
   "type": "module",
   "main": "lib/index.js",
   "exports": {
@@ -35,7 +35,9 @@
     "dsh",
     "dsh-plugin",
     "deepseek-harness",
-    "sidebar"
+    "sidebar",
+    "workspace",
+    "search"
   ],
   "license": "MIT"
 }
