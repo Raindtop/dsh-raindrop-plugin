@@ -26,14 +26,21 @@ Sessions outside the current year include the year (`2025年10月29日`); the En
 
 ## Install
 
+From npm (recommended):
+
 ```bash
-# from this directory (a local, unbuilt package)
+dsh plugin --profile web add dsh-raindrop-plugin
+```
+
+From a local checkout (link, for development):
+
+```bash
 dsh plugin --profile web add /absolute/path/to/dsh-raindrop-plugin
 ```
 
 The package declares `dsh.bundle.patch`, so the plugin manager installs it as a profile bundle, inserts the `ui-raindrop-plugin` row, and records it in `dsh.profile.bundles`. Refresh the browser tab after installing. No rebuild is needed — `lib/client.js` is hand-written in the same module format as the shipped client bundles.
 
-After editing the **Host half** (`lib/index.js`) of an installed link package, `dsh web` replaces it on the next profile reload — edit `~/.dsh/profiles/<name>/cordis.patch.yml` once (for example add and remove a comment), or restart `dsh web`. Client-only changes just need a page refresh.
+After editing the **Host half** (`lib/index.js`) of an installed link package, `dsh web` replaces it on the next profile reload — edit `~/.dsh/profiles/<name>/cordis.patch.yml` once (for example add and remove a comment), or restart `dsh web`. Client-only changes just need a page refresh. Registry installs are plain copies, so reinstall to pick up edits.
 
 To remove it:
 
