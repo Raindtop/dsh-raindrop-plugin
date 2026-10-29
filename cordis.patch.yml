@@ -1,7 +1,7 @@
-# dsh-session-date bundle patch: insert the dual-face plugin row into the web
+# dsh-raindrop-plugin bundle patch: insert the dual-face plugin row into the web
 # profile roster. The node half (exports ".") is an empty apply whose only job
 # is giving the Loader a host row; the browser half (exports "./client") is
 # discovered through the package.json dsh.client declaration.
 - insert:
-    - id: ui-session-date
-      name: 'dsh-session-date'
+    - id: ui-raindrop-plugin
+      name: 'dsh-raindrop-plugin'

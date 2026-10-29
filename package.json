@@ -1,7 +1,7 @@
 {
-  "name": "dsh-session-date",
-  "version": "0.3.0",
-  "description": "DSH web GUI plugin: calendar dates in the sidebar, a date-view panel (first/last date, date sorting, range filtering), and a searchable workspace picker.",
+  "name": "dsh-raindrop-plugin",
+  "version": "0.4.0",
+  "description": "DSH web GUI plugin by raindrop: calendar dates in the sidebar, a date-view panel (first/last date, date sorting, range filtering), and a searchable workspace picker.",
   "type": "module",
   "main": "lib/index.js",
   "exports": {
@@ -37,7 +37,8 @@
     "deepseek-harness",
     "sidebar",
     "workspace",
-    "search"
+    "search",
+    "raindrop"
   ],
   "license": "MIT"
 }

@@ -1,4 +1,4 @@
-# dsh-session-date
+# dsh-raindrop-plugin
 
 A DSH web GUI plugin that shows each sidebar session's **calendar day** instead of a relative age ("just now / 5 min / 3 days"), plus a **Date view** panel in the sidebar header (pick which date the row shows, sort by date, filter by date range) and a **search field in the new-session workspace picker**.
 
@@ -28,17 +28,17 @@ Sessions outside the current year include the year (`2025年10月29日`); the En
 
 ```bash
 # from this directory (a local, unbuilt package)
-dsh plugin --profile web add /absolute/path/to/dsh-session-date
+dsh plugin --profile web add /absolute/path/to/dsh-raindrop-plugin
 ```
 
-The package declares `dsh.bundle.patch`, so the plugin manager installs it as a profile bundle, inserts the `ui-session-date` row, and records it in `dsh.profile.bundles`. Refresh the browser tab after installing. No rebuild is needed — `lib/client.js` is hand-written in the same module format as the shipped client bundles.
+The package declares `dsh.bundle.patch`, so the plugin manager installs it as a profile bundle, inserts the `ui-raindrop-plugin` row, and records it in `dsh.profile.bundles`. Refresh the browser tab after installing. No rebuild is needed — `lib/client.js` is hand-written in the same module format as the shipped client bundles.
 
 After editing the **Host half** (`lib/index.js`) of an installed link package, `dsh web` replaces it on the next profile reload — edit `~/.dsh/profiles/<name>/cordis.patch.yml` once (for example add and remove a comment), or restart `dsh web`. Client-only changes just need a page refresh.
 
 To remove it:
 
 ```bash
-dsh plugin --profile web remove dsh-session-date
+dsh plugin --profile web remove dsh-raindrop-plugin
 ```
 
 ## Changing the date style

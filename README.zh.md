@@ -1,4 +1,4 @@
-# dsh-session-date
+# dsh-raindrop-plugin
 
 一个 DSH Web GUI 插件：把侧边栏会话列表里的**相对时间**（“刚刚 / 5分钟 / 3天 / 2个月”）换成**具体日期**，在侧栏头部加一个「日期视图」面板（切换首次对话/最后活动、按日期排序、按日期范围筛选），并在“新会话”的工作区选择菜单里加一个**搜索框**。
 
@@ -28,17 +28,17 @@
 
 ```bash
 # 在本目录执行（这是一个本地源码包，无需构建）
-dsh plugin --profile web add /absolute/path/to/dsh-session-date
+dsh plugin --profile web add /absolute/path/to/dsh-raindrop-plugin
 ```
 
-包内声明了 `dsh.bundle.patch`，插件管理器会把它作为 profile 组合包安装、插入 `ui-session-date` 行，并写入 `dsh.profile.bundles`。装完刷新一下浏览器页面即可；`lib/client.js` 是手写的、与官方客户端包相同的模块格式，不需要编译。
+包内声明了 `dsh.bundle.patch`，插件管理器会把它作为 profile 组合包安装、插入 `ui-raindrop-plugin` 行，并写入 `dsh.profile.bundles`。装完刷新一下浏览器页面即可；`lib/client.js` 是手写的、与官方客户端包相同的模块格式，不需要编译。
 
 改动已安装（link）插件的**宿主侧**代码（`lib/index.js`）后，`dsh web` 会在下一次 profile 重载时替换它——修改一次 `~/.dsh/profiles/<name>/cordis.patch.yml`（例如加一行注释再删掉）或重启 `dsh web` 即可；客户端代码改动只需刷新页面。
 
 卸载：
 
 ```bash
-dsh plugin --profile web remove dsh-session-date
+dsh plugin --profile web remove dsh-raindrop-plugin
 ```
 
 ## 调整日期格式
