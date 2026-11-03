@@ -41,7 +41,7 @@ git push origin v<新版本>
 ## 1. 发布前检查
 
 - [ ] `version` 已 bump，且这个版本号没发过：`npm view dsh-raindrop-plugin versions --json`
-- [ ] 产物清单正确（应为 11 个文件，`lib/`、`docs/preview.png`、`docs/own-quota.png`、`docs/dsh-versions.png`、`cordis.patch.yml`、两个 README、LICENSE、`package.json`）：
+- [ ] 产物清单正确（应为 12 个文件，`lib/`、`docs/preview.png`、`docs/own-quota.png`、`docs/dsh-versions.png`、`docs/session-project.png`、`cordis.patch.yml`、两个 README、LICENSE、`package.json`）：
 
       ```bash
       npm pack --dry-run

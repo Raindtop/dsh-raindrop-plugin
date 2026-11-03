@@ -1,6 +1,6 @@
 # dsh-raindrop-plugin
 
-A DSH web GUI plugin that shows each sidebar session's **calendar day** instead of a relative age ("just now / 5 min / 3 days"), plus a **Date view** panel in the sidebar header (pick which date the row shows, sort by date, filter by date range), a **search field in the new-session workspace picker**, a **per-session git branch badge that restores the session's branch when it is opened again**, a **top alert while the selected model spends your own DeepSeek quota**, and a **sidebar footer with the running and latest DSH versions**.
+A DSH web GUI plugin that shows each sidebar session's **calendar day** instead of a relative age ("just now / 5 min / 3 days"), plus a **Date view** panel in the sidebar header (pick which date the row shows, sort by date, filter by date range), a **search field in the new-session workspace picker**, a **project label above each sidebar Session title**, a **per-session git branch badge that restores the session's branch when it is opened again**, a **top alert while the selected model spends your own DeepSeek quota**, and a **sidebar footer with the running and latest DSH versions**.
 
 ![Sidebar date view](docs/preview.png)
 
@@ -17,6 +17,7 @@ Sessions outside the current year include the year (`2025年10月29日`); the En
 - **Workspace picker search**: opening the new-session workspace menu adds a search field at the top. The picker shows at most five workspaces at a time; the rest scroll, with the search field and the add-workspace footer staying visible. Typing filters the list to matching workspaces. `↑`/`↓` move the highlight, `Home`/`End` jump to the first/last match, and `Enter` switches to the highlighted row (or, when nothing is highlighted, the exact label, then the first match). With no match the field's underline turns orange and `Enter` does nothing.
 - **Own-quota alert**: while the model selected for the conversation on screen is served by your own DeepSeek account (`deepseek-account` login route or `deepseek-official` API-key route), a fixed amber strip at the top of the window reads **“正在使用自己的额度！”** / **“You are using your own quota!”**. It disappears as soon as another provider is selected and never blocks the UI. Third-party gateways such as `qz` keep their own billing and do not trigger it.
 - **DSH versions**: the sidebar footer above the account row shows the **running** release (`当前` / `Current`) and npm's **latest** `@deepseek-ai/dsh` release (`最新` / `Latest`), with a green `已是最新` / `Up to date` or amber `可更新` / `Update` badge. It refreshes every 15 minutes and hides when the sidebar is collapsed.
+- **Project label**: each Session row shows its workspace/project name above the title, so a flat session list reads `dsh-raindrop-plugin` / `DeepseekChatBack` / `SuperFish` at a glance. The full directory path is the hover title. The label sits on its own compact line, so it does not steal horizontal room from the Session title.
 - **Session git version**: each Session records the git branch of its working directory when it is created, and its row shows a branch badge. Opening the Session again switches the directory back to that branch when the tree is clean; with uncommitted changes it only warns and leaves the working tree alone.
 - **Date view panel**: the calendar button in the sidebar header, left of the native view-options sliders.
   - Show date: `Last activity` / `First message`
@@ -51,6 +52,17 @@ The sidebar footer above the account row shows both releases:
 - **Latest** comes from npm's `latest` dist-tag. The Host half serves it at `GET /dsh-version/latest` with a 10-minute cache and reuses a stale successful read when npm is temporarily unreachable; if that route is absent, the browser falls back to the public npm manifest.
 - A green `已是最新` / `Up to date` badge means the two strings match; amber `可更新` / `Update` means they differ; `检查中…` / `Checking…` is the first request; `获取失败` / `Failed` means neither source answered. The row refreshes every 15 minutes while the page stays open and follows the interface language.
 - The block is hidden while the sidebar is collapsed. It only reads version strings — it never installs, updates, or touches account data.
+
+## Project label
+
+![Session project label](docs/session-project.png)
+
+Every Session row carries a small, muted project line directly above its title. The label answers the question a flat, cross-workspace session list cannot: which project does this conversation belong to?
+
+- **Name source**: the Session's workspace title first (workspace membership in the public `workspaces` store), then the longest matching workspace path for the Session's `cwd`, then the workspace group header already around the row, then the final segment of `cwd`.
+- **Full path**: hover the title line; its native tooltip is the workspace (or session) directory. The label never exposes prompts, messages, or credentials.
+- **Layout**: the label and a slightly tighter title line share the row's existing 32px height (a 9px label line plus a 17px title line). The title keeps its full width; the label does not compete with the date or the git branch badge on the right.
+- **Updates**: the label is re-stamped when the sessions list or the workspaces list changes, and on locale or layout re-render. A session without a workspace or a usable `cwd` simply has no label; nothing else changes.
 
 ## Session git version
 
@@ -146,8 +158,13 @@ The plugin can also be switched off entirely from the GUI's plugin settings, lik
 14. `GET /session-git/branches` returns `{ sessions: { [id]: { branch, cwd, inferred, detached } }, current: { [cwd]: branch }, fetchedAt }`. `current` lets the browser mark mismatches without running git; the body is cached for five seconds.
 15. `POST /session-git/restore` accepts only `{ sessionId }`: it re-reads the real branch and runs `git switch` (or `checkout` on older git) only when `git status --porcelain` is clean and the branch still exists. Requests for the same directory are serialized so two opens cannot race one checkout. The badge and the date share the row's clock `<span>` (`::before` for the branch, `::after` for the date); no React-managed node is inserted or moved.
 
-If a future DSH build renames the CSS-module local, the plugin falls back to the row's third direct `<span>`; if the row structure changes entirely, it becomes a no-op rather than mangling the row. Sorting/filtering likewise only engages when the structure matches.
+**Session project label**
+
+16. The public `ctx.get("workspaces")` store lists workspaces with `title`, `path`, and `sessionIds`. The plugin first resolves a Session by membership, then by the longest workspace `path` that prefixes `cwd`, then by the workspace group header around the row, then by the final `cwd` segment. The full resolved path becomes the title span's native tooltip.
+17. The title span (CSS-module local `_title`) gets `data-dsh-session-project`; a stylesheet paints the name as a 9px label line above the title and tightens that row's title line to 17px, so the existing 32px row fits both. No React-managed text node or child is inserted, and the label re-stamps with the sessions and workspaces stores.
+
+If a future DSH build renames the CSS-module local, the plugin falls back to the row's third direct `<span>` for the clock and its second direct `<span>` for the title; if the row structure changes entirely, it becomes a no-op rather than mangling the row. Sorting/filtering likewise only engages when the structure matches.
 
 ## Compatibility
 
-Written against DSH `0.2.1-rc.5` (web profile). The client half needs the `sessions` service; the Host half needs `webServer`, `connection`, and optionally `sessionQuery` (when absent, the dates route returns an empty map and dates fall back to last activity). The own-quota alert uses the model label's `data-provider-id` or the Session `modelSelection` projection; when neither exists it stays out of the way. The version row uses `window.__DSH_BOOT__.release` and the npm-backed Host route; an offline Host shows the failure state rather than blocking the UI. The session git version relies on the public `session/created` event, `sessionQuery`, and a working `git` executable; a non-repository directory, a missing git, or a missing event just means no badge and no automatic switch.
+Written against DSH `0.2.1-rc.5` (web profile). The client half needs the `sessions` service; the Host half needs `webServer`, `connection`, and optionally `sessionQuery` (when absent, the dates route returns an empty map and dates fall back to last activity). The project label optionally reads the public `workspaces` service; without it, the workspace group header or the Session `cwd` still supplies a name. The own-quota alert uses the model label's `data-provider-id` or the Session `modelSelection` projection; when neither exists it stays out of the way. The version row uses `window.__DSH_BOOT__.release` and the npm-backed Host route; an offline Host shows the failure state rather than blocking the UI. The session git version relies on the public `session/created` event, `sessionQuery`, and a working `git` executable; a non-repository directory, a missing git, or a missing event just means no badge and no automatic switch.
