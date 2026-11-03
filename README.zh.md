@@ -17,8 +17,8 @@
 - **工作区搜索**：打开“新会话”的工作区菜单后，顶部会出现搜索框。工作区菜单最多显示 5 行，其余滚动，搜索框和“添加工作区”固定在两端；输入时列表只保留匹配的工作区；`↑`/`↓` 移动高亮，`Home`/`End` 跳到第一个/最后一个匹配项，`Enter` 切到当前高亮项（没有高亮时优先名称完全匹配，其次第一个匹配项）。没有匹配时输入框下划线变橙色，`Enter` 不动作。
 - **自有额度告警**：当前会话选中的模型由自己的 DeepSeek 账号提供时（`deepseek-account` 账号登录路由或 `deepseek-official` 官方 API Key 路由），窗口顶部会固定显示一条琥珀色告警：**“正在使用自己的额度！”**（英文界面为 **“You are using your own quota!”**）。切到其他供应商后立即消失，不遮挡、不拦截操作。`qz` 等第三方网关有自己的计费，不会触发。
 - **DSH 版本**：侧栏底部账号行上方显示**当前**运行的版本和 npm 上的**最新** `@deepseek-ai/dsh` 版本，并用绿色 `已是最新` 或橙色 `可更新` 标记差异；每 15 分钟刷新一次，侧栏折叠时隐藏。
-- **项目标签**：每个会话行在标题上方显示所属工作区/项目名，平铺的会话列表也能一眼看出 `dsh-raindrop-plugin` / `DeepseekChatBack` / `SuperFish` 等来源；悬停标题可看完整目录。项目名单独占一行，不占标题的横向空间。
-- **会话 git 版本**：会话创建时记录其工作目录所在的 git 分支，会话行时钟旁显示分支徽标；重新打开会话时若当前分支与记录不一致，工作区干净就自动 `git switch` 回该分支，有未提交改动则只提示、不动工作区。
+- **项目标签**：每个会话行在标题上方显示所属工作区/项目名，做成浅蓝色的小标签（浅蓝底、浅蓝字），平铺的会话列表也能一眼看出 `dsh-raindrop-plugin` / `DeepseekChatBack` / `SuperFish` 等来源；悬停标题可看完整目录。项目名单独占一行，不占标题的横向空间。
+- **会话 git 版本**：会话创建时记录其工作目录所在的 git 分支，会话行时钟旁显示浅绿色分支徽标（不一致时保持琥珀色警告）；重新打开会话时若当前分支与记录不一致，工作区干净就自动 `git switch` 回该分支，有未提交改动则只提示、不动工作区。
 - **日期视图面板**：侧栏头部的日历按钮（在原生“视图选项”滑杆按钮左侧）。
   - 显示日期：`最后活动` / `首次对话`
   - 按日期排序：`默认（侧栏排序）` / `日期：新 → 旧` / `日期：旧 → 新`
@@ -57,7 +57,7 @@ const OWN_QUOTA_PROVIDERS = new Set(["deepseek-account", "deepseek-official"]);
 
 ![会话项目标签](docs/session-project.png)
 
-每个会话行的标题正上方有一条浅色的项目名。对于跨工作区平铺的会话列表，它能直接回答“这条会话属于哪个项目”。
+每个会话行的标题正上方有一条浅蓝色的项目标签：浅蓝底、浅蓝字。对于跨工作区平铺的会话列表，它能直接回答“这条会话属于哪个项目”。
 
 - **名称来源**：优先取会话所属工作区的标题（公开 `workspaces` store 的成员关系），其次取 `cwd` 匹配到的最长工作区路径，再次取行所在的工作区分组标题，最后回退到 `cwd` 的最后一段目录名。
 - **完整路径**：悬停标题显示原生 tooltip，内容是工作区或会话目录；标签不会读取提示词、消息或凭据。
@@ -68,7 +68,7 @@ const OWN_QUOTA_PROVIDERS = new Set(["deepseek-account", "deepseek-official"]);
 
 会话创建时，Host 半读取该会话 `cwd` 的当前分支，存进 `$DSH_HOME/storages/raindrop-plugin-session-git.json`；文件里只有 `sessionId → { 分支, 目录 }`，没有提交内容、文件或提示词。
 
-- **显示**：会话行的时钟位置左侧显示分支小徽标（如 `dev-20261011`），悬停可看完整分支名；鼠标停在行上时该区域让位给原生操作按钮。
+- **显示**：会话行的时钟位置左侧显示浅绿色分支小徽标（如 `dev-20261011`），悬停可看完整分支名；鼠标停在行上时该区域让位给原生操作按钮。
 - **不一致**：目录当前分支与记录不同时，徽标变琥珀色，悬停提示同时给出两个分支。
 - **自动回切**：打开（或切到）会话时，Host 重新读取真实分支：
   - 一致 → 什么也不做；
@@ -157,12 +157,12 @@ const SHOW_YEAR = "auto";   // auto | always | never
 
 13. Host 半监听公开的 `session/created` 事件，对 `header.cwd` 执行 `git -C <cwd> rev-parse --abbrev-ref HEAD` 记录分支；插件安装前的历史会话在 `GET /session-git/branches` 首次出现时补记。
 14. `GET /session-git/branches` 返回 `{ sessions: { [id]: { branch, cwd, inferred, detached } }, current: { [cwd]: 当前分支 }, fetchedAt }`；`current` 让浏览器不执行 git 也能把徽标标成不一致，5 秒缓存。
-15. `POST /session-git/restore` 只接受 `{ sessionId }`：重新读取真实分支，`git status --porcelain` 干净且分支存在时才 `git switch`（旧版 git 回退 `checkout`）；同一目录的请求串行化，避免并发切换。徽标和日期共用行内时钟 `<span>`（日期用 `::after`、分支用 `::before`），不插入、不移动 React 管理的节点。
+15. `POST /session-git/restore` 只接受 `{ sessionId }`：重新读取真实分支，`git status --porcelain` 干净且分支存在时才 `git switch`（旧版 git 回退 `checkout`）；同一目录的请求串行化，避免并发切换。浅绿色徽标和日期共用行内时钟 `<span>`（日期用 `::after`、分支用 `::before`），不插入、不移动 React 管理的节点。
 
 **会话项目标签**
 
 16. 公开的 `ctx.get("workspaces")` store 列出工作区的 `title`、`path` 和 `sessionIds`。插件先按成员关系匹配会话，再按 `cwd` 匹配最长的工作区路径前缀，再取行所在的工作区分组标题，最后回退到 `cwd` 的最后一段；完整路径写入标题 `<span>` 的原生 tooltip。
-17. 标题 `<span>`（CSS Module 类名以 `_title` 结尾）加上 `data-dsh-session-project` 属性；样式把它画成标题上方的 9px 小标签，并把该行标题行高收紧到 17px，两行正好放进原来的 32px 行高。不插入、不替换任何 React 管理的文本节点或子节点；会话列表或工作区列表变化时重新打戳。
+17. 标题 `<span>`（CSS Module 类名以 `_title` 结尾）加上 `data-dsh-session-project` 属性；样式把它画成标题上方的 9px 浅蓝色小标签，并把该行标题行高收紧到 17px，两行正好放进原来的 32px 行高。不插入、不替换任何 React 管理的文本节点或子节点；会话列表或工作区列表变化时重新打戳。
 
 如果以后 DSH 改了 CSS Module 的类名，插件会回退到“时钟用行内第三个直接 `<span>`、标题用第二个直接 `<span>`”；如果整行结构都变了，它只会失效（变成 no-op），不会破坏行内容。排序/筛选同样只在结构匹配时生效。
 
