@@ -1,6 +1,6 @@
 # dsh-raindrop-plugin
 
-一个 DSH Web GUI 插件：把侧边栏会话列表里的**相对时间**（“刚刚 / 5分钟 / 3天 / 2个月”）换成**具体日期**，在侧栏头部加一个「日期视图」面板（切换首次对话/最后活动、按日期排序、按日期范围筛选），在“新会话”的工作区选择菜单里加一个**搜索框**，并在当前模型使用自己的 DeepSeek 账号额度时在**顶部显示告警**。
+一个 DSH Web GUI 插件：把侧边栏会话列表里的**相对时间**（“刚刚 / 5分钟 / 3天 / 2个月”）换成**具体日期**，在侧栏头部加一个「日期视图」面板（切换首次对话/最后活动、按日期排序、按日期范围筛选），在“新会话”的工作区选择菜单里加一个**搜索框**，在当前模型使用自己的 DeepSeek 账号额度时在**顶部显示告警**，在侧栏底部显示**当前与最新的 DSH 版本**，并记录每个会话创建时所在的 **git 分支**（会话行显示分支徽标，重新打开会话时自动切回）。
 
 ![侧边栏日期视图](docs/preview.png)
 
@@ -16,6 +16,8 @@
 - **行内日期**：每个会话行末尾显示日历日（默认“最后活动”，可切换为“首次对话”）。
 - **工作区搜索**：打开“新会话”的工作区菜单后，顶部会出现搜索框。工作区菜单最多显示 5 行，其余滚动，搜索框和“添加工作区”固定在两端；输入时列表只保留匹配的工作区；`↑`/`↓` 移动高亮，`Home`/`End` 跳到第一个/最后一个匹配项，`Enter` 切到当前高亮项（没有高亮时优先名称完全匹配，其次第一个匹配项）。没有匹配时输入框下划线变橙色，`Enter` 不动作。
 - **自有额度告警**：当前会话选中的模型由自己的 DeepSeek 账号提供时（`deepseek-account` 账号登录路由或 `deepseek-official` 官方 API Key 路由），窗口顶部会固定显示一条琥珀色告警：**“正在使用自己的额度！”**（英文界面为 **“You are using your own quota!”**）。切到其他供应商后立即消失，不遮挡、不拦截操作。`qz` 等第三方网关有自己的计费，不会触发。
+- **DSH 版本**：侧栏底部账号行上方显示**当前**运行的版本和 npm 上的**最新** `@deepseek-ai/dsh` 版本，并用绿色 `已是最新` 或橙色 `可更新` 标记差异；每 15 分钟刷新一次，侧栏折叠时隐藏。
+- **会话 git 版本**：会话创建时记录其工作目录所在的 git 分支，会话行时钟旁显示分支徽标；重新打开会话时若当前分支与记录不一致，工作区干净就自动 `git switch` 回该分支，有未提交改动则只提示、不动工作区。
 - **日期视图面板**：侧栏头部的日历按钮（在原生“视图选项”滑杆按钮左侧）。
   - 显示日期：`最后活动` / `首次对话`
   - 按日期排序：`默认（侧栏排序）` / `日期：新 → 旧` / `日期：旧 → 新`
@@ -38,6 +40,31 @@ const OWN_QUOTA_PROVIDERS = new Set(["deepseek-account", "deepseek-official"]);
 ```
 
 `deepseek-account` 是 DeepSeek 账号登录路由，`deepseek-official` 是官方 API Key 路由。想连第三方账号一起提醒（例如 `"qz"`），把它的 provider id 加进去；不想提醒某个路由就从集合里删掉。这些 id 与模型选择器上的 `data-provider-id` 一致；插件不读取 API Key、账号 token 或账户余额。
+
+## DSH 版本
+
+![DSH 版本](docs/dsh-versions.png)
+
+侧栏底部账号行上方同时显示两个版本：
+
+- **当前**取自当前页面的 boot manifest（`window.__DSH_BOOT__.release`），所以它精确对应当前标签页实际运行的构建；悬停可以看到 commit。
+- **最新**取自 npm 的 `latest` dist-tag。Host 半在 `GET /dsh-version/latest` 提供并缓存 10 分钟；npm 暂时不可达时优先复用上一次成功结果，路由缺失时浏览器会直接回退到公开的 npm manifest。
+- 绿色 `已是最新` 表示两个字符串一致；橙色 `可更新` 表示不一致；`检查中…` 是首次请求；`获取失败` 表示两个来源都没有响应。页面保持打开时每 15 分钟刷新一次，并跟随界面语言。
+- 侧栏折叠时这一块隐藏。它只读取版本字符串，不会安装、更新或读取账号数据。
+
+## 会话 git 版本
+
+会话创建时，Host 半读取该会话 `cwd` 的当前分支，存进 `$DSH_HOME/storages/raindrop-plugin-session-git.json`；文件里只有 `sessionId → { 分支, 目录 }`，没有提交内容、文件或提示词。
+
+- **显示**：会话行的时钟位置左侧显示分支小徽标（如 `dev-20261011`），悬停可看完整分支名；鼠标停在行上时该区域让位给原生操作按钮。
+- **不一致**：目录当前分支与记录不同时，徽标变琥珀色，悬停提示同时给出两个分支。
+- **自动回切**：打开（或切到）会话时，Host 重新读取真实分支：
+  - 一致 → 什么也不做；
+  - 不一致且工作区干净 → `git switch <记录分支>`，底部弹出绿色提示并刷新徽标；
+  - 不一致但工作区有改动（含未跟踪文件）→ 不切换，弹出琥珀色提示；清理后再切回该会话即可重试；
+  - 分支已删除、目录不是 git 仓库或处于 detached HEAD → 只提示，不切换。
+- 切换只针对插件记录过的会话：请求只带 `sessionId`，目录和分支都来自 Host 自己的记录，不能借此切到任意目录或 ref。
+- 记录发生在会话创建时；插件安装前就存在的旧会话在第一次出现在列表时补记当时分支，并标记为 `inferred`。
 
 ## 安装
 
@@ -102,14 +129,26 @@ const SHOW_YEAR = "auto";   // auto | always | never
 **Host 路由**
 
 7. 浏览器拿不到 `createdAt`（`session.list` 只带 `updatedAt`），所以 Host 半用公开的 `sessionQuery.listSessions()` 读取 durable header，在 `GET /session-date/dates` 返回 `{ sessions: { [id]: createdAt }, fetchedAt }`。路由走 `connection.authorizeIndex` 的浏览器会话校验（无 cookie 返回 401），只暴露会话 id 与创建时间，不返回标题、提示词或路径；15 秒缓存。
+8. 第二条校验路由 `GET /dsh-version/latest` 返回 npm `@deepseek-ai/dsh/latest` 的 `{ latest, checkedAt, stale? }`。它使用 8 秒超时，成功缓存 10 分钟、失败缓存 60 秒；刷新失败时优先返回上一次成功值，避免离线时丢掉已知版本。
 
 **自有额度告警**
 
-8. 输入框的模型标签带有 `data-provider-id`（官方 `conversation.input.model.label` 约定），这是实时来源；没有输入框的入口页（插件管理、设置）回退到 `ctx.sessions.list` 中当前会话的 durable `projectionValues.modelSelection.next` / `lastUsed`，并用“最后一次已知 provider”在页面切换期间兜底。
-9. 告警条是挂在 `body` 上的固定元素；显示时给 `#root` 加 `data-dsh-own-quota` 属性，样式规则在顶部预留 32px 高的一条带，告警固定在带内；隐藏时移除属性，布局恢复原高。不移动、不替换任何 React 管理的节点。
+9. 输入框的模型标签带有 `data-provider-id`（官方 `conversation.input.model.label` 约定），这是实时来源；没有输入框的入口页（插件管理、设置）回退到 `ctx.sessions.list` 中当前会话的 durable `projectionValues.modelSelection.next` / `lastUsed`，并用“最后一次已知 provider”在页面切换期间兜底。
+10. 告警条是挂在 `body` 上的固定元素；显示时给 `#root` 加 `data-dsh-own-quota` 属性，样式规则在顶部预留 32px 高的一条带，告警固定在带内；隐藏时移除属性，布局恢复原高。不移动、不替换任何 React 管理的节点。
+
+**DSH 版本**
+
+11. 当前版本来自 `window.__DSH_BOOT__.release`（版本 + 可选 commit），和模块系统使用的构建身份一致，所以它跟随标签页实际运行的构建，而不是某个包路径。
+12. 最新版本来自上面的 Host 路由，Host 路由缺失时回退到公开 npm manifest。版本块插在 `sidebar.settings` 上方，并在侧栏 footer 重新渲染时重新挂载；样式在侧栏折叠类下隐藏，插件每 15 分钟刷新一次。
+
+**会话 git 版本**
+
+13. Host 半监听公开的 `session/created` 事件，对 `header.cwd` 执行 `git -C <cwd> rev-parse --abbrev-ref HEAD` 记录分支；插件安装前的历史会话在 `GET /session-git/branches` 首次出现时补记。
+14. `GET /session-git/branches` 返回 `{ sessions: { [id]: { branch, cwd, inferred, detached } }, current: { [cwd]: 当前分支 }, fetchedAt }`；`current` 让浏览器不执行 git 也能把徽标标成不一致，5 秒缓存。
+15. `POST /session-git/restore` 只接受 `{ sessionId }`：重新读取真实分支，`git status --porcelain` 干净且分支存在时才 `git switch`（旧版 git 回退 `checkout`）；同一目录的请求串行化，避免并发切换。徽标和日期共用行内时钟 `<span>`（日期用 `::after`、分支用 `::before`），不插入、不移动 React 管理的节点。
 
 如果以后 DSH 改了 CSS Module 的类名，插件会回退到“行内第三个直接 `<span>`”；如果整行结构都变了，它只会失效（变成 no-op），不会破坏行内容。排序/筛选同样只在结构匹配时生效。
 
 ## 兼容性
 
-按 DSH `0.2.1-rc.4`（web profile）编写。客户端依赖 `sessions` 服务；Host 半依赖 `webServer`、`connection` 和可选的 `sessionQuery`（缺失时路由返回空表，日期回退到最后活动）。自有额度告警使用模型标签的 `data-provider-id` 或会话的 `modelSelection` projection；两者都不存在时保持静默。
+按 DSH `0.2.1-rc.5`（web profile）编写。客户端依赖 `sessions` 服务；Host 半依赖 `webServer`、`connection` 和可选的 `sessionQuery`（缺失时路由返回空表，日期回退到最后活动）。自有额度告警使用模型标签的 `data-provider-id` 或会话的 `modelSelection` projection；两者都不存在时保持静默。版本块使用 `window.__DSH_BOOT__.release` 和 npm 支撑的 Host 路由；离线时显示“获取失败”，不会阻塞界面。会话 git 版本依赖公开的 `session/created` 事件、`sessionQuery` 和可用的 `git`；目录不是仓库、git 缺失或事件缺失时只是没有徽标、不自动切换，不影响其他功能。

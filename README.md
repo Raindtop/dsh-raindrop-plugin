@@ -1,6 +1,6 @@
 # dsh-raindrop-plugin
 
-A DSH web GUI plugin that shows each sidebar session's **calendar day** instead of a relative age ("just now / 5 min / 3 days"), plus a **Date view** panel in the sidebar header (pick which date the row shows, sort by date, filter by date range), a **search field in the new-session workspace picker**, and a **top alert while the selected model spends your own DeepSeek quota**.
+A DSH web GUI plugin that shows each sidebar session's **calendar day** instead of a relative age ("just now / 5 min / 3 days"), plus a **Date view** panel in the sidebar header (pick which date the row shows, sort by date, filter by date range), a **search field in the new-session workspace picker**, a **per-session git branch badge that restores the session's branch when it is opened again**, a **top alert while the selected model spends your own DeepSeek quota**, and a **sidebar footer with the running and latest DSH versions**.
 
 ![Sidebar date view](docs/preview.png)
 
@@ -16,6 +16,8 @@ Sessions outside the current year include the year (`2025年10月29日`); the En
 - **Inline dates**: every session row ends with a calendar day (last activity by default, switchable to first conversation).
 - **Workspace picker search**: opening the new-session workspace menu adds a search field at the top. The picker shows at most five workspaces at a time; the rest scroll, with the search field and the add-workspace footer staying visible. Typing filters the list to matching workspaces. `↑`/`↓` move the highlight, `Home`/`End` jump to the first/last match, and `Enter` switches to the highlighted row (or, when nothing is highlighted, the exact label, then the first match). With no match the field's underline turns orange and `Enter` does nothing.
 - **Own-quota alert**: while the model selected for the conversation on screen is served by your own DeepSeek account (`deepseek-account` login route or `deepseek-official` API-key route), a fixed amber strip at the top of the window reads **“正在使用自己的额度！”** / **“You are using your own quota!”**. It disappears as soon as another provider is selected and never blocks the UI. Third-party gateways such as `qz` keep their own billing and do not trigger it.
+- **DSH versions**: the sidebar footer above the account row shows the **running** release (`当前` / `Current`) and npm's **latest** `@deepseek-ai/dsh` release (`最新` / `Latest`), with a green `已是最新` / `Up to date` or amber `可更新` / `Update` badge. It refreshes every 15 minutes and hides when the sidebar is collapsed.
+- **Session git version**: each Session records the git branch of its working directory when it is created, and its row shows a branch badge. Opening the Session again switches the directory back to that branch when the tree is clean; with uncommitted changes it only warns and leaves the working tree alone.
 - **Date view panel**: the calendar button in the sidebar header, left of the native view-options sliders.
   - Show date: `Last activity` / `First message`
   - Sort by date: `Default (sidebar order)` / `Date: newest first` / `Date: oldest first`
@@ -38,6 +40,31 @@ const OWN_QUOTA_PROVIDERS = new Set(["deepseek-account", "deepseek-official"]);
 ```
 
 `deepseek-account` is the DeepSeek account-login route and `deepseek-official` is the official API-key route. Add a provider id (for example `"qz"`) to warn about a third-party account as well, or remove one to stop warning about it. The ids are the same `data-provider-id` values the model picker exposes; the plugin never reads an API key, an account token, or the account balance.
+
+## DSH versions
+
+![DSH versions](docs/dsh-versions.png)
+
+The sidebar footer above the account row shows both releases:
+
+- **Current** comes from the open page's boot manifest (`window.__DSH_BOOT__.release`), so it names exactly the build the tab is running, including its commit in the hover title.
+- **Latest** comes from npm's `latest` dist-tag. The Host half serves it at `GET /dsh-version/latest` with a 10-minute cache and reuses a stale successful read when npm is temporarily unreachable; if that route is absent, the browser falls back to the public npm manifest.
+- A green `已是最新` / `Up to date` badge means the two strings match; amber `可更新` / `Update` means they differ; `检查中…` / `Checking…` is the first request; `获取失败` / `Failed` means neither source answered. The row refreshes every 15 minutes while the page stays open and follows the interface language.
+- The block is hidden while the sidebar is collapsed. It only reads version strings — it never installs, updates, or touches account data.
+
+## Session git version
+
+When a Session is created, the Host half reads the branch of its `cwd` and stores it in `$DSH_HOME/storages/raindrop-plugin-session-git.json`. The file only maps `sessionId → { branch, directory }`; it holds no commits, files, or prompts.
+
+- **Badge**: a small branch pill (for example `dev-20261011`) sits left of the clock cell in the Session row; hovering shows the full name. While the row is hovered the cell makes way for the native action buttons.
+- **Mismatch**: when the directory's current branch differs from the recorded one, the pill turns amber and its tooltip names both branches.
+- **Automatic restore**: opening (or switching to) a Session re-reads the real branch:
+  - same → nothing happens;
+  - different and the tree is clean → `git switch <recorded branch>`, a green notice appears at the bottom, and the badge refreshes;
+  - different with a dirty tree (untracked files included) → no switch, an amber notice explains why; clean up and switch back to the Session to retry;
+  - deleted branch, non-repository directory, or detached HEAD → notice only, no switch.
+- Restores only address Sessions this plugin recorded: the request carries just a `sessionId`, and both the directory and branch come from the Host's own store, so it cannot be used to check out an arbitrary directory or ref.
+- Recording happens at creation time. Sessions that predate the plugin are backfilled on first sight and flagged `inferred`.
 
 ## Install
 
@@ -98,17 +125,29 @@ The plugin can also be switched off entirely from the GUI's plugin settings, lik
 5. While date sorting is on, the rows' direct parent temporarily becomes a flex column and each row wrapper gets a CSS `order`. React keeps owning document order; no node is moved.
 6. Rows outside the range get one hidden attribute; a workspace section whose sessions are all filtered out is hidden, and an empty-range notice appears at the top of the list.
 
-**Host route**
+**Host routes**
 
 7. The browser cannot see `createdAt` (`session.list` only carries `updatedAt`), so the Host half reads durable headers through the public `sessionQuery.listSessions()` and serves `GET /session-date/dates` as `{ sessions: { [id]: createdAt }, fetchedAt }`. The route passes `connection.authorizeIndex` (401 without the browser session cookie) and exposes only ids and creation instants — no titles, prompts, or paths — with a 15 s cache.
+8. The second authenticated route, `GET /dsh-version/latest`, returns `{ latest, checkedAt, stale? }` from npm's `@deepseek-ai/dsh/latest` manifest. It uses an 8 s deadline, caches success for 10 minutes and failure for 60 s, and prefers a stale successful read over an error so an offline page keeps the last known version.
 
 **Own-quota alert**
 
-8. The composer's model label carries `data-provider-id` (the documented `conversation.input.model.label` contract), which is the live source. When no composer is mounted (plugin manager, settings), the selected Session's durable `projectionValues.modelSelection.next` / `lastUsed` from `ctx.sessions.list` stands in, and the last known provider bridges the gap while navigating.
-9. The warning is a body-level fixed strip. Showing it adds a `data-dsh-own-quota` attribute to `#root`, whose stylesheet rule reserves the 32px top band while the strip is fixed over that band; hiding it removes the attribute and the frame returns to its previous height. No React-owned node is moved or replaced.
+9. The composer's model label carries `data-provider-id` (the documented `conversation.input.model.label` contract), which is the live source. When no composer is mounted (plugin manager, settings), the selected Session's durable `projectionValues.modelSelection.next` / `lastUsed` from `ctx.sessions.list` stands in, and the last known provider bridges the gap while navigating.
+10. The warning is a body-level fixed strip. Showing it adds a `data-dsh-own-quota` attribute to `#root`, whose stylesheet rule reserves the 32px top band while the strip is fixed over that band; hiding it removes the attribute and the frame returns to its previous height. No React-owned node is moved or replaced.
+
+**DSH versions**
+
+11. The current release comes from `window.__DSH_BOOT__.release` (version plus optional commit) — the same identity the module system uses, so it follows the build actually running in the tab rather than a package path.
+12. The latest release comes from the Host route above, with the public npm manifest as a browser fallback. The footer block is inserted above `sidebar.settings` and re-ensured when the footer re-renders; the stylesheet hides it under the sidebar's collapsed class, and the plugin refreshes the value every 15 minutes.
+
+**Session git version**
+
+13. The Host half listens to the public `session/created` event and records `git -C <header.cwd> rev-parse --abbrev-ref HEAD`; Sessions that predate the plugin are backfilled the first time `GET /session-git/branches` sees them, and a directory that is not a repository is not retried for ten minutes.
+14. `GET /session-git/branches` returns `{ sessions: { [id]: { branch, cwd, inferred, detached } }, current: { [cwd]: branch }, fetchedAt }`. `current` lets the browser mark mismatches without running git; the body is cached for five seconds.
+15. `POST /session-git/restore` accepts only `{ sessionId }`: it re-reads the real branch and runs `git switch` (or `checkout` on older git) only when `git status --porcelain` is clean and the branch still exists. Requests for the same directory are serialized so two opens cannot race one checkout. The badge and the date share the row's clock `<span>` (`::before` for the branch, `::after` for the date); no React-managed node is inserted or moved.
 
 If a future DSH build renames the CSS-module local, the plugin falls back to the row's third direct `<span>`; if the row structure changes entirely, it becomes a no-op rather than mangling the row. Sorting/filtering likewise only engages when the structure matches.
 
 ## Compatibility
 
-Written against DSH `0.2.1-rc.4` (web profile). The client half needs the `sessions` service; the Host half needs `webServer`, `connection`, and optionally `sessionQuery` (when absent, the route returns an empty map and dates fall back to last activity). The own-quota alert uses the model label's `data-provider-id` or the Session `modelSelection` projection; when neither exists it stays out of the way.
+Written against DSH `0.2.1-rc.5` (web profile). The client half needs the `sessions` service; the Host half needs `webServer`, `connection`, and optionally `sessionQuery` (when absent, the dates route returns an empty map and dates fall back to last activity). The own-quota alert uses the model label's `data-provider-id` or the Session `modelSelection` projection; when neither exists it stays out of the way. The version row uses `window.__DSH_BOOT__.release` and the npm-backed Host route; an offline Host shows the failure state rather than blocking the UI. The session git version relies on the public `session/created` event, `sessionQuery`, and a working `git` executable; a non-repository directory, a missing git, or a missing event just means no badge and no automatic switch.
