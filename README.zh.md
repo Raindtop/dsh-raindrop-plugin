@@ -1,6 +1,6 @@
 # dsh-raindrop-plugin
 
-一个 DSH Web GUI 插件：把侧边栏会话列表里的**相对时间**（“刚刚 / 5分钟 / 3天 / 2个月”）换成**具体日期**，在侧栏头部加一个「日期视图」面板（切换首次对话/最后活动、按日期排序、按日期范围筛选），在“新会话”的工作区选择菜单里加一个**搜索框**，在每个会话标题上方显示**所属工作区/项目名**，在当前模型使用自己的 DeepSeek 账号额度时在**顶部显示告警**，在侧栏底部显示**当前与最新的 DSH 版本**，记住**刷新后不重置的侧栏宽度**，支持**悬停展开侧栏（可 pin 固定）**，并记录每个会话创建时所在的 **git 分支**（会话行显示分支徽标，重新打开会话时自动切回）。
+一个 DSH Web GUI 插件：把侧边栏会话列表里的**相对时间**（“刚刚 / 5分钟 / 3天 / 2个月”）换成**具体日期**，在侧栏头部加一个「日期视图」面板（切换首次对话/最后活动、按日期排序、按日期范围筛选），在“新会话”的工作区选择菜单里加一个**搜索框**，在每个会话标题上方显示**所属工作区/项目名**，在当前模型使用自己的 DeepSeek 账号额度时在**顶部显示告警**，在侧栏底部显示**当前与最新的 DSH 版本**，记住**刷新后不重置的侧栏宽度**，支持**悬停展开侧栏（可 pin 固定）**，并记录每个会话创建时所在的 **git 分支**（会话行显示分支徽标，重新打开会话时自动切回，也可悬停行后切换）。
 
 ![侧边栏日期视图](docs/preview.png)
 
@@ -20,7 +20,7 @@
 - **侧栏宽度记忆**：左侧栏可在 264px–420px 之间拖动；插件会记住宽度并在刷新后恢复，会话列表不会又缩回默认的 280px。折叠/窄屏模式下的宽度不保存，布局 store 不支持时回退到应用默认值。
 - **悬停侧栏**：侧栏平时收起为 56px 图标条；鼠标移到图标条或侧栏上展开到记住的宽度，移开后 120ms 收起。侧栏标题栏里有一个 pin 按钮可固定打开，再点一次回到悬停模式；pin 状态会记住，悬停模式默认开启。收起时图标条只保留应用 logo 和底部账号；新建会话、插件、自动化、更多、添加工作区、搜索等快捷图标都隐藏，悬停展开后随完整侧栏一起回来。
 - **项目标签**：每个会话行在标题上方显示所属工作区/项目名，做成浅蓝色的小标签（浅蓝底、浅蓝字），平铺的会话列表也能一眼看出 `dsh-raindrop-plugin` / `DeepseekChatBack` / `SuperFish` 等来源；悬停标题可看完整目录。项目名单独占一行，不占标题的横向空间。
-- **会话 git 版本**：会话创建时记录其工作目录所在的 git 分支，会话行时钟旁显示浅绿色分支徽标（不一致时保持琥珀色警告）；重新打开会话时若当前分支与记录不一致，工作区干净就自动 `git switch` 回该分支，有未提交改动则只提示、不动工作区。
+- **会话 git 版本**：会话创建时记录其工作目录所在的 git 分支，会话行时钟旁显示浅绿色分支徽标（不一致时保持琥珀色警告）；重新打开会话时若当前分支与记录不一致，工作区干净就自动 `git switch` 回该分支，有未提交改动则只提示、不动工作区。悬停会话行时操作区会出现绿色分支徽标，点它可把这个会话切到另一个本地分支（要求工作区干净）并更新记录。
 - **日期视图面板**：侧栏头部的日历按钮（侧栏展开时显示，在原生“视图选项”滑杆按钮左侧）。
   - 显示日期：`最后活动` / `首次对话`
   - 按日期排序：`默认（侧栏排序）` / `日期：新 → 旧` / `日期：旧 → 新`
@@ -93,8 +93,10 @@ const OWN_QUOTA_PROVIDERS = new Set(["deepseek-account", "deepseek-official"]);
   - 不一致且工作区干净 → `git switch <记录分支>`，底部弹出绿色提示并刷新徽标；
   - 不一致但工作区有改动（含未跟踪文件）→ 不切换，弹出琥珀色提示；清理后再切回该会话即可重试；
   - 分支已删除、目录不是 git 仓库或处于 detached HEAD → 只提示，不切换。
-- 切换只针对插件记录过的会话：请求只带 `sessionId`，目录和分支都来自 Host 自己的记录，不能借此切到任意目录或 ref。
-- 记录发生在会话创建时；插件安装前就存在的旧会话在第一次出现在列表时补记当时分支，并标记为 `inferred`。
+- **切换分支**：鼠标停在会话行上时，时钟区域让位给原生操作区，操作区左侧会出现同色绿色分支小徽标。点它打开该目录的本地分支选择器（可筛选，带 `当前` / `会话` 标记；输入筛选，`↑`/`↓` 高亮，`Enter` 切换）。选择后更新这个会话的记录；工作区干净时执行 `git switch`；有未提交改动、分支不存在或不是 git 仓库时只提示。
+- 选择器是会话级的，但工作目录是共享的：切换一个会话会改变该目录的 checkout；同目录其他会话仍保留各自记录的分支，重新打开时可能再切回自己的分支。
+- 回切和切换都只针对插件记录过的会话：请求只带 `sessionId`（切换多一个本地分支名），目录来自 Host 自己的记录，不能借此切到任意目录或 ref。
+- 记录发生在会话创建时，或通过分支选择器切换时；插件安装前就存在的旧会话在第一次出现在列表时补记当时分支，并标记为 `inferred`。
 
 ## 安装
 
@@ -175,19 +177,20 @@ const SHOW_YEAR = "auto";   // auto | always | never
 
 13. Host 半监听公开的 `session/created` 事件，对 `header.cwd` 执行 `git -C <cwd> rev-parse --abbrev-ref HEAD` 记录分支；插件安装前的历史会话在 `GET /session-git/branches` 首次出现时补记。
 14. `GET /session-git/branches` 返回 `{ sessions: { [id]: { branch, cwd, inferred, detached } }, current: { [cwd]: 当前分支 }, fetchedAt }`；`current` 让浏览器不执行 git 也能把徽标标成不一致，5 秒缓存。
-15. `POST /session-git/restore` 只接受 `{ sessionId }`：重新读取真实分支，`git status --porcelain` 干净且分支存在时才 `git switch`（旧版 git 回退 `checkout`）；同一目录的请求串行化，避免并发切换。浅绿色徽标和日期共用行内时钟 `<span>`（日期用 `::after`、分支用 `::before`），不插入、不移动 React 管理的节点。
+15. `POST /session-git/restore` 只接受 `{ sessionId }`：重新读取真实分支，`git status --porcelain` 干净且分支存在时才 `git switch`（旧版 git 回退 `checkout`）；同一目录的请求串行化，避免并发切换。浅绿色徽标和日期共用行内时钟 `<span>`（日期用 `::after`、分支用 `::before`）。时钟区域在行悬停时让位给操作区，所以切换徽标是注入到原生操作区（`_rowActions`）里的独立按钮；行更新时重新挂载，清理时移除。
+16. `GET /session-git/list?sessionId=` 用 `git for-each-ref refs/heads` 读本地分支和真实 HEAD；`POST /session-git/switch` 接受 `{ sessionId, branch }`，工作区脏、分支不存在或不是仓库时拒绝；成功执行 `git switch` 并只更新该会话的 `branch` / `recordedAt`；响应为 `switched | same | dirty | missing | not-git | unknown | error`；同一目录的请求共用 restore 锁。选择器始终把焦点留在筛选框：`↑`/`↓` 移动高亮行（循环，初始选中当前分支），`Enter` 切换；输入筛选后高亮重置到第一个匹配项。
 
 **会话项目标签**
 
-16. 公开的 `ctx.get("workspaces")` store 列出工作区的 `title`、`path` 和 `sessionIds`。插件先按成员关系匹配会话，再按 `cwd` 匹配最长的工作区路径前缀，再取行所在的工作区分组标题，最后回退到 `cwd` 的最后一段；完整路径写入标题 `<span>` 的原生 tooltip。
-17. 标题 `<span>`（CSS Module 类名以 `_title` 结尾）加上 `data-dsh-session-project` 属性；样式把它画成标题上方的 9px 浅蓝色小标签，并把该行标题行高收紧到 17px，两行正好放进原来的 32px 行高。不插入、不替换任何 React 管理的文本节点或子节点；会话列表或工作区列表变化时重新打戳。
+17. 公开的 `ctx.get("workspaces")` store 列出工作区的 `title`、`path` 和 `sessionIds`。插件先按成员关系匹配会话，再按 `cwd` 匹配最长的工作区路径前缀，再取行所在的工作区分组标题，最后回退到 `cwd` 的最后一段；完整路径写入标题 `<span>` 的原生 tooltip。
+18. 标题 `<span>`（CSS Module 类名以 `_title` 结尾）加上 `data-dsh-session-project` 属性；样式把它画成标题上方的 9px 浅蓝色小标签，并把该行标题行高收紧到 17px，两行正好放进原来的 32px 行高。不插入、不替换任何 React 管理的文本节点或子节点；会话列表或工作区列表变化时重新打戳。
 
 **侧栏宽度**
 
-18. 布局 store 不持久化 `layoutInfo.sidebar`；`setSidebar` 会把宽度夹在 264–420，所以收起要用 `toggleSidebar`，展开/设置宽度用 `setSidebar`。插件把宽度和悬停/pin 状态存进 localStorage；加载时若悬停模式开启就收起到图标条，pin 固定则恢复宽度。`document` 的 `pointermove` 从图标条展开，并在指针离开时安排收起，同时忽略拖拽条、打开的菜单和日期面板；标题栏的 pin 切换模式。frame 的 React action bag 和 pin 都是内部接缝；缺失时功能自动失效。
+19. 布局 store 不持久化 `layoutInfo.sidebar`；`setSidebar` 会把宽度夹在 264–420，所以收起要用 `toggleSidebar`，展开/设置宽度用 `setSidebar`。插件把宽度和悬停/pin 状态存进 localStorage；加载时若悬停模式开启就收起到图标条，pin 固定则恢复宽度。`document` 的 `pointermove` 从图标条展开，并在指针离开时安排收起，同时忽略拖拽条、打开的菜单和日期面板；标题栏的 pin 切换模式。frame 的 React action bag 和 pin 都是内部接缝；缺失时功能自动失效。
 
 如果以后 DSH 改了 CSS Module 的类名，插件会回退到“时钟用行内第三个直接 `<span>`、标题用第二个直接 `<span>`”；如果整行结构都变了，它只会失效（变成 no-op），不会破坏行内容。排序/筛选同样只在结构匹配时生效。
 
 ## 兼容性
 
-按 DSH `0.2.1-rc.5`（web profile）编写。客户端依赖 `sessions` 服务；Host 半依赖 `webServer`、`connection` 和可选的 `sessionQuery`（缺失时路由返回空表，日期回退到最后活动）。项目标签可选读取公开的 `workspaces` 服务；缺失时仍可用工作区分组标题或会话 `cwd` 得到项目名。自有额度告警使用模型标签的 `data-provider-id` 或会话的 `modelSelection` projection；两者都不存在时保持静默。版本块使用 `window.__DSH_BOOT__.release` 和 npm 支撑的 Host 路由；离线时显示“获取失败”，不会阻塞界面。侧栏宽度/悬停使用布局 frame 的内部 `setSidebar`/`toggleSidebar` action bag 和 56px 折叠图标条；缺失时保留应用默认行为。会话 git 版本依赖公开的 `session/created` 事件、`sessionQuery` 和可用的 `git`；目录不是仓库、git 缺失或事件缺失时只是没有徽标、不自动切换，不影响其他功能。
+按 DSH `0.2.1-rc.5`（web profile）编写。客户端依赖 `sessions` 服务；Host 半依赖 `webServer`、`connection` 和可选的 `sessionQuery`（缺失时路由返回空表，日期回退到最后活动）。项目标签可选读取公开的 `workspaces` 服务；缺失时仍可用工作区分组标题或会话 `cwd` 得到项目名。自有额度告警使用模型标签的 `data-provider-id` 或会话的 `modelSelection` projection；两者都不存在时保持静默。版本块使用 `window.__DSH_BOOT__.release` 和 npm 支撑的 Host 路由；离线时显示“获取失败”，不会阻塞界面。侧栏宽度/悬停使用布局 frame 的内部 `setSidebar`/`toggleSidebar` action bag 和 56px 折叠图标条；缺失时保留应用默认行为。会话 git 版本依赖公开的 `session/created` 事件、`sessionQuery` 和可用的 `git`；目录不是仓库、git 缺失或事件缺失时只是没有徽标、不自动切换，不影响其他功能。分支选择器额外需要 Host 半的 `GET /session-git/list` 和 `POST /session-git/switch`；旧 Host 只显示读取失败，不改分支。
