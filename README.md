@@ -16,7 +16,7 @@ Sessions outside the current year include the year (`2025年10月29日`); the En
 - **Inline dates**: every session row ends with a calendar day (last activity by default, switchable to first conversation).
 - **Workspace picker search**: opening the new-session workspace menu adds a search field at the top. The picker shows at most five workspaces at a time; the rest scroll, with the search field and the add-workspace footer staying visible. Typing filters the list to matching workspaces. `↑`/`↓` move the highlight, `Home`/`End` jump to the first/last match, and `Enter` switches to the highlighted row (or, when nothing is highlighted, the exact label, then the first match). With no match the field's underline turns orange and `Enter` does nothing.
 - **Own-quota alert**: while the model selected for the conversation on screen is served by your own DeepSeek account (`deepseek-account` login route or `deepseek-official` API-key route), a fixed amber strip at the top of the window reads **“正在使用自己的额度！”** / **“You are using your own quota!”**. It disappears as soon as another provider is selected and never blocks the UI. Third-party gateways such as `qz` keep their own billing and do not trigger it.
-- **DSH versions**: the sidebar footer above the account row shows the **running** release (`当前` / `Current`) and npm's **latest** `@deepseek-ai/dsh` release (`最新` / `Latest`), with a green `已是最新` / `Up to date` or amber `可更新` / `Update` badge. It refreshes every 15 minutes and hides when the sidebar is collapsed.
+- **DSH versions**: the sidebar footer's bottom row shows the **running** release (`当前` / `Current`) and npm's **latest** `@deepseek-ai/dsh` release (`最新` / `Latest`) beside the account, with a green `已是最新` / `Up to date` or amber `可更新` / `Update` badge. It refreshes every 15 minutes and hides when the sidebar is collapsed.
 - **Project label**: each Session row shows its workspace/project name above the title as a small light-blue label (light-blue text on a soft blue fill), so a flat session list reads `dsh-raindrop-plugin` / `DeepseekChatBack` / `SuperFish` at a glance. The full directory path is the hover title. The label sits on its own compact line, so it does not steal horizontal room from the Session title.
 - **Session git version**: each Session records the git branch of its working directory when it is created, and its row shows a small light-green branch badge (the mismatch warning stays amber). Opening the Session again switches the directory back to that branch when the tree is clean; with uncommitted changes it only warns and leaves the working tree alone.
 - **Date view panel**: the calendar button in the sidebar header, left of the native view-options sliders.
@@ -46,7 +46,7 @@ const OWN_QUOTA_PROVIDERS = new Set(["deepseek-account", "deepseek-official"]);
 
 ![DSH versions](docs/dsh-versions.png)
 
-The sidebar footer above the account row shows both releases:
+The sidebar footer's bottom row shows both releases beside the account (on a narrow sidebar the block stacks below the account):
 
 - **Current** comes from the open page's boot manifest (`window.__DSH_BOOT__.release`), so it names exactly the build the tab is running, including its commit in the hover title.
 - **Latest** comes from npm's `latest` dist-tag. The Host half serves it at `GET /dsh-version/latest` with a 10-minute cache and reuses a stale successful read when npm is temporarily unreachable; if that route is absent, the browser falls back to the public npm manifest.
@@ -150,7 +150,7 @@ The plugin can also be switched off entirely from the GUI's plugin settings, lik
 **DSH versions**
 
 11. The current release comes from `window.__DSH_BOOT__.release` (version plus optional commit) — the same identity the module system uses, so it follows the build actually running in the tab rather than a package path.
-12. The latest release comes from the Host route above, with the public npm manifest as a browser fallback. The footer block is inserted above `sidebar.settings` and re-ensured when the footer re-renders; the stylesheet hides it under the sidebar's collapsed class, and the plugin refreshes the value every 15 minutes.
+12. The latest release comes from the Host route above, with the public npm manifest as a browser fallback. The footer block is inserted before `sidebar.settings` in the footer DOM; the stylesheet places it in the bottom grid to the right of the account (below it on a narrow sidebar). It is re-ensured when the footer re-renders, hidden under the sidebar's collapsed class, and refreshed every 15 minutes.
 
 **Session git version**
 
