@@ -48,7 +48,7 @@ const OWN_QUOTA_PROVIDERS = new Set(["deepseek-account", "deepseek-official"]);
 
 ![DSH versions](docs/dsh-versions.png)
 
-The sidebar footer's bottom row shows both releases beside the account (on a narrow sidebar the block stacks below the account):
+The sidebar footer's bottom row shows both releases beside the account at every sidebar width (narrow sidebars ellipsize the version value):
 
 - **Current** comes from the open page's boot manifest (`window.__DSH_BOOT__.release`), so it names exactly the build the tab is running, including its commit in the hover title.
 - **Latest** comes from npm's `latest` dist-tag. The Host half serves it at `GET /dsh-version/latest` with a 10-minute cache and reuses a stale successful read when npm is temporarily unreachable; if that route is absent, the browser falls back to the public npm manifest.
@@ -170,7 +170,7 @@ The plugin can also be switched off entirely from the GUI's plugin settings, lik
 **DSH versions**
 
 11. The current release comes from `window.__DSH_BOOT__.release` (version plus optional commit) — the same identity the module system uses, so it follows the build actually running in the tab rather than a package path.
-12. The latest release comes from the Host route above, with the public npm manifest as a browser fallback. The footer block is inserted before `sidebar.settings` in the footer DOM; the stylesheet places it in the bottom grid to the right of the account (below it on a narrow sidebar). It is re-ensured when the footer re-renders, hidden under the sidebar's collapsed class, and refreshed every 15 minutes.
+12. The latest release comes from the Host route above, with the public npm manifest as a browser fallback. The footer block is inserted before `sidebar.settings` in the footer DOM; the stylesheet places it in the bottom grid to the right of the account at every width; narrow sidebars ellipsize the version value. It is re-ensured when the footer re-renders, hidden under the sidebar's collapsed class, and refreshed every 15 minutes.
 
 **Session git version**
 

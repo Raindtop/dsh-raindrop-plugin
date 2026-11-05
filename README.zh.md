@@ -48,7 +48,7 @@ const OWN_QUOTA_PROVIDERS = new Set(["deepseek-account", "deepseek-official"]);
 
 ![DSH 版本](docs/dsh-versions.png)
 
-侧栏底部与账号同一行的右侧同时显示两个版本；窄侧栏时版本块会落到账号下方：
+侧栏底部与账号同一行显示两个版本，所有宽度都保持并排；窄侧栏时版本号会省略：
 
 - **当前**取自当前页面的 boot manifest（`window.__DSH_BOOT__.release`），所以它精确对应当前标签页实际运行的构建；悬停可以看到 commit。
 - **最新**取自 npm 的 `latest` dist-tag。Host 半在 `GET /dsh-version/latest` 提供并缓存 10 分钟；npm 暂时不可达时优先复用上一次成功结果，路由缺失时浏览器会直接回退到公开的 npm manifest。
@@ -171,7 +171,7 @@ const SHOW_YEAR = "auto";   // auto | always | never
 **DSH 版本**
 
 11. 当前版本来自 `window.__DSH_BOOT__.release`（版本 + 可选 commit），和模块系统使用的构建身份一致，所以它跟随标签页实际运行的构建，而不是某个包路径。
-12. 最新版本来自上面的 Host 路由，Host 路由缺失时回退到公开 npm manifest。版本块插在 footer 中 `sidebar.settings` 之前；样式把它放在底部网格的右侧、与账号同级（窄侧栏时落到账号下方）。侧栏 footer 重新渲染时重新挂载，折叠时隐藏，插件每 15 分钟刷新一次。
+12. 最新版本来自上面的 Host 路由，Host 路由缺失时回退到公开 npm manifest。版本块插在 footer 中 `sidebar.settings` 之前；样式把它放在底部网格的右侧、与账号同级（所有宽度都并排；窄侧栏时版本号省略）。侧栏 footer 重新渲染时重新挂载，折叠时隐藏，插件每 15 分钟刷新一次。
 
 **会话 git 版本**
 
