@@ -67,7 +67,7 @@ const OWN_QUOTA_PROVIDERS = new Set(["deepseek-account", "deepseek-official"]);
 
 默认情况下侧栏只显示 56px 图标条。鼠标移到图标条或侧栏上会展开到记住的宽度；移开后 120ms 收起。侧栏标题栏里的小 pin 按钮可以固定打开，再点一次回到悬停模式。pin 状态存在 `localStorage`（`dsh-raindrop-plugin:sidebar-hover`），悬停模式默认开启。
 
-- 鼠标在调整宽度的拖拽条、打开的菜单或日期面板上时不会收起，避免拖动/操作时侧栏消失。
+- 只要拖拽条在用，或任意菜单/浮层打开（视图选项、日期面板、分支选择器、工作区选择、账号/模型菜单），侧栏就保持展开，即使鼠标移到主区域；等菜单关闭且鼠标在外面再移动才收起。
 - 侧栏收起时图标条只保留应用 logo 和底部账号。新建会话、插件、自动化、更多、添加工作区、搜索等原生快捷图标，以及 pin/日期按钮都隐藏；悬停展开后完整侧栏和所有控件一起回来。
 - 侧栏收起时 pin 和日期按钮都隐藏；悬停展开后才能看到。pin 的 tooltip 在悬停模式下是 `固定侧栏`，固定后是 `启用悬停展开`。
 
@@ -187,7 +187,7 @@ const SHOW_YEAR = "auto";   // auto | always | never
 
 **侧栏宽度**
 
-19. 布局 store 不持久化 `layoutInfo.sidebar`；`setSidebar` 会把宽度夹在 264–420，所以收起要用 `toggleSidebar`，展开/设置宽度用 `setSidebar`。插件把宽度和悬停/pin 状态存进 localStorage；加载时若悬停模式开启就收起到图标条，pin 固定则恢复宽度。`document` 的 `pointermove` 从图标条展开，并在指针离开时安排收起，同时忽略拖拽条、打开的菜单和日期面板；标题栏的 pin 切换模式。frame 的 React action bag 和 pin 都是内部接缝；缺失时功能自动失效。
+19. 布局 store 不持久化 `layoutInfo.sidebar`；`setSidebar` 会把宽度夹在 264–420，所以收起要用 `toggleSidebar`，展开/设置宽度用 `setSidebar`。插件把宽度和悬停/pin 状态存进 localStorage；加载时若悬停模式开启就收起到图标条，pin 固定则恢复宽度。`document` 的 `pointermove` 从图标条展开，并在指针离开时安排收起，但拖拽条在用或任意菜单/浮层打开时保持展开；标题栏的 pin 切换模式。frame 的 React action bag 和 pin 都是内部接缝；缺失时功能自动失效。
 
 如果以后 DSH 改了 CSS Module 的类名，插件会回退到“时钟用行内第三个直接 `<span>`、标题用第二个直接 `<span>`”；如果整行结构都变了，它只会失效（变成 no-op），不会破坏行内容。排序/筛选同样只在结构匹配时生效。
 

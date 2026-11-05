@@ -67,7 +67,7 @@ The left sidebar can be dragged between 264px and 420px, but the app's layout st
 
 By default the sidebar starts on its 56px rail. Hover the rail or the sidebar to expand it to the remembered width; moving the pointer away collapses it after 120ms. The small pin button in the sidebar header fixes it open; click it again to go back to hover reveal. The pin state is stored in `localStorage` (`dsh-raindrop-plugin:sidebar-hover`); hover reveal is on by default.
 
-- The sidebar stays open while the pointer is over the resize handle, an open menu, or the date-view panel, so resizing and menus do not trigger a collapse.
+- The sidebar stays open while the resize handle is in use or any menu/popover is open (native view options, the date-view panel, the branch picker, the workspace picker, the account/model menus), even after the pointer moves into the main area. It collapses only after those close and the pointer is outside.
 - The collapsed rail keeps only the app logo/toggle and the account trigger. The app's rail shortcuts (new session, plugins, automation, more, add workspace, search) and the plugin's pin/date controls are hidden; hover the rail to bring back the full sidebar and all controls.
 - The pin and the date-view button are hidden while the sidebar is collapsed; hover the rail to reveal the full sidebar and both controls. The pin's tooltip is `固定侧栏` / `Pin sidebar open` while hovering, and `启用悬停展开` / `Enable hover reveal` while pinned.
 
@@ -186,7 +186,7 @@ The plugin can also be switched off entirely from the GUI's plugin settings, lik
 
 **Sidebar width**
 
-19. The layout store does not persist `layoutInfo.sidebar`; `setSidebar` clamps 264–420, so collapsing goes through `toggleSidebar` while expanding or setting a width uses `setSidebar`. The plugin stores the width and the hover/pin preference in localStorage; on load it collapses to the rail when hover reveal is on, or restores the width when pinned. A document `pointermove` expands from the rail and schedules the collapse when the pointer is away, ignoring the resize handle, open menus, and the date panel; the header pin toggles the mode. The frame's React action bag and the pin are internal seams; if absent, the feature no-ops.
+19. The layout store does not persist `layoutInfo.sidebar`; `setSidebar` clamps 264–420, so collapsing goes through `toggleSidebar` while expanding or setting a width uses `setSidebar`. The plugin stores the width and the hover/pin preference in localStorage; on load it collapses to the rail when hover reveal is on, or restores the width when pinned. A document `pointermove` expands from the rail and schedules the collapse when the pointer is away, but keeps it open while the resize handle is active or any menu/popover is open; the header pin toggles the mode. The frame's React action bag and the pin are internal seams; if absent, the feature no-ops.
 
 If a future DSH build renames the CSS-module local, the plugin falls back to the row's third direct `<span>` for the clock and its second direct `<span>` for the title; if the row structure changes entirely, it becomes a no-op rather than mangling the row. Sorting/filtering likewise only engages when the structure matches.
 
