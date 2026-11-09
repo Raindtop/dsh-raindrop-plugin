@@ -1,7 +1,7 @@
 {
   "name": "dsh-raindrop-plugin",
-  "version": "0.9.5",
-  "description": "DSH web GUI plugin by raindrop: calendar dates in the sidebar, a date-view panel (first/last date, date sorting, range filtering), a searchable workspace picker, a project label above each sidebar Session title, a per-session git branch badge that restores the session's branch when it is opened again and a keyboard-navigable picker for switching that branch, a top alert when the selected model spends the user's own DeepSeek quota, a sidebar footer with the running and latest DSH versions, a remembered sidebar width that survives refresh, and a hover-reveal sidebar with a pin.",
+  "version": "0.10.0",
+  "description": "DSH web GUI plugin by raindrop: calendar dates in the sidebar, a date-view panel (first/last date, date sorting, range filtering), a searchable workspace picker that prints each project’s path, a project label above each sidebar Session title, a per-session git branch badge that restores the session's branch when it is opened again and a keyboard-navigable picker for switching that branch, a top alert when the selected model spends the user's own DeepSeek quota, a sidebar footer with the running and latest DSH versions, a remembered sidebar width that survives refresh, and a hover-reveal sidebar with a pin.",
   "type": "module",
   "main": "lib/index.js",
   "exports": {
