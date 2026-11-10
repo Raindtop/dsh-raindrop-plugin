@@ -88,15 +88,17 @@ const OWN_QUOTA_PROVIDERS = new Set(["deepseek-account", "deepseek-official"]);
 
 - **显示**：会话行的时钟位置左侧显示浅绿色分支小徽标（如 `dev-20261011`），悬停可看完整分支名；鼠标停在行上时该区域让位给原生操作按钮。
 - **不一致**：目录当前分支与记录不同时，徽标变琥珀色，悬停提示同时给出两个分支。
-- **自动回切**：打开（或切到）会话时，Host 重新读取真实分支：
+- **自动回切**：只有**手动点会话行**打开会话时才回切，Host 重新读取真实分支：
   - 一致 → 什么也不做；
   - 不一致且工作区干净 → `git switch <记录分支>`，底部弹出绿色提示并刷新徽标；
   - 不一致但工作区有改动（含未跟踪文件）→ 不切换，弹出琥珀色提示；清理后再切回该会话即可重试；
   - 分支已删除、目录不是 git 仓库或处于 detached HEAD → 只提示，不切换。
+  - **不会**回切的情况：新建会话、刷新/重开页面、由快捷键或列表变化切到会话、记录来自补记（`inferred`）、目标是空白会话。一个目录的 checkout 是共享的，这些场景自动切分支会把你刚 checkout 的分支悄悄换掉。
+- **空白会话**：应用会把“新会话”复用一个空白会话，它的旧记录可能还是上一次的分支。插件对空白会话只**重记**当前 HEAD（`POST /session-git/record`），从不据此切换；等你真正发消息后，记录就是当前分支。
 - **切换分支**：鼠标停在会话行上时，时钟区域让位给原生操作区，操作区左侧会出现同色绿色分支小徽标。点它打开该目录的本地分支选择器（可筛选，带 `当前` / `会话` 标记；输入筛选，`↑`/`↓` 高亮，`Enter` 切换）。选择后更新这个会话的记录；工作区干净时执行 `git switch`；有未提交改动、分支不存在或不是 git 仓库时只提示。
 - 选择器是会话级的，但工作目录是共享的：切换一个会话会改变该目录的 checkout；同目录其他会话仍保留各自记录的分支，重新打开时可能再切回自己的分支。
 - 回切和切换都只针对插件记录过的会话：请求只带 `sessionId`（切换多一个本地分支名），目录来自 Host 自己的记录，不能借此切到任意目录或 ref。
-- 记录发生在会话创建时，或通过分支选择器切换时；插件安装前就存在的旧会话在第一次出现在列表时补记当时分支，并标记为 `inferred`。
+- 记录发生在会话创建时、空白会话成为当前会话时（重记当前 HEAD），或通过分支选择器切换时；插件安装前就存在的旧会话在第一次出现在列表时补记当时分支，并标记为 `inferred`，补记的记录不参与自动回切。
 
 ## 安装
 
@@ -178,16 +180,17 @@ const SHOW_YEAR = "auto";   // auto | always | never
 13. Host 半监听公开的 `session/created` 事件，对 `header.cwd` 执行 `git -C <cwd> rev-parse --abbrev-ref HEAD` 记录分支；插件安装前的历史会话在 `GET /session-git/branches` 首次出现时补记。
 14. `GET /session-git/branches` 返回 `{ sessions: { [id]: { branch, cwd, inferred, detached } }, current: { [cwd]: 当前分支 }, fetchedAt }`；`current` 让浏览器不执行 git 也能把徽标标成不一致，5 秒缓存。
 15. `POST /session-git/restore` 只接受 `{ sessionId }`：重新读取真实分支，`git status --porcelain` 干净且分支存在时才 `git switch`（旧版 git 回退 `checkout`）；同一目录的请求串行化，避免并发切换。浅绿色徽标和日期共用行内时钟 `<span>`（日期用 `::after`、分支用 `::before`）。时钟区域在行悬停时让位给操作区，所以切换徽标是注入到原生操作区（`_rowActions`）里的独立按钮；行更新时重新挂载，清理时移除。
-16. `GET /session-git/list?sessionId=` 用 `git for-each-ref refs/heads` 读本地分支和真实 HEAD；`POST /session-git/switch` 接受 `{ sessionId, branch }`，工作区脏、分支不存在或不是仓库时拒绝；成功执行 `git switch` 并只更新该会话的 `branch` / `recordedAt`；响应为 `switched | same | dirty | missing | not-git | unknown | error`；同一目录的请求共用 restore 锁。选择器始终把焦点留在筛选框：`↑`/`↓` 移动高亮行（循环，初始选中当前分支），`Enter` 切换；输入筛选后高亮重置到第一个匹配项。
+16. `POST /session-git/record` 只接受 `{ sessionId }`：读该会话目录的当前 HEAD 并覆盖记录，**不**执行 `git switch`；用于把被复用的空白会话的旧记录刷新成当前分支。会话没有记录时用 `sessionQuery` 找到它的 `cwd`，响应为 `ok | unknown | not-git`。
+17. `GET /session-git/list?sessionId=` 用 `git for-each-ref refs/heads` 读本地分支和真实 HEAD；`POST /session-git/switch` 接受 `{ sessionId, branch }`，工作区脏、分支不存在或不是仓库时拒绝；成功执行 `git switch` 并只更新该会话的 `branch` / `recordedAt`；响应为 `switched | same | dirty | missing | not-git | unknown | error`；同一目录的请求共用 restore 锁。选择器始终把焦点留在筛选框：`↑`/`↓` 移动高亮行（循环，初始选中当前分支），`Enter` 切换；输入筛选后高亮重置到第一个匹配项。
 
 **会话项目标签**
 
-17. 公开的 `ctx.get("workspaces")` store 列出工作区的 `title`、`path` 和 `sessionIds`。插件先按成员关系匹配会话，再按 `cwd` 匹配最长的工作区路径前缀，再取行所在的工作区分组标题，最后回退到 `cwd` 的最后一段；完整路径写入标题 `<span>` 的原生 tooltip。
-18. 标题 `<span>`（CSS Module 类名以 `_title` 结尾）加上 `data-dsh-session-project` 属性；样式把它画成标题上方的 9px 浅蓝色小标签，并把该行标题行高收紧到 17px，两行正好放进原来的 32px 行高。不插入、不替换任何 React 管理的文本节点或子节点；会话列表或工作区列表变化时重新打戳。
+18. 公开的 `ctx.get("workspaces")` store 列出工作区的 `title`、`path` 和 `sessionIds`。插件先按成员关系匹配会话，再按 `cwd` 匹配最长的工作区路径前缀，再取行所在的工作区分组标题，最后回退到 `cwd` 的最后一段；完整路径写入标题 `<span>` 的原生 tooltip。
+19. 标题 `<span>`（CSS Module 类名以 `_title` 结尾）加上 `data-dsh-session-project` 属性；样式把它画成标题上方的 9px 浅蓝色小标签，并把该行标题行高收紧到 17px，两行正好放进原来的 32px 行高。不插入、不替换任何 React 管理的文本节点或子节点；会话列表或工作区列表变化时重新打戳。
 
 **侧栏宽度**
 
-19. 布局 store 不持久化 `layoutInfo.sidebar`；`setSidebar` 会把宽度夹在 264–420，所以收起要用 `toggleSidebar`，展开/设置宽度用 `setSidebar`。插件把宽度和悬停/pin 状态存进 localStorage；加载时若悬停模式开启就收起到图标条，pin 固定则恢复宽度。`document` 的 `pointermove` 从图标条展开，并在指针离开时安排收起，但拖拽条在用或任意菜单/浮层打开时保持展开；标题栏的 pin 切换模式。frame 的 React action bag 和 pin 都是内部接缝；缺失时功能自动失效。
+20. 布局 store 不持久化 `layoutInfo.sidebar`；`setSidebar` 会把宽度夹在 264–420，所以收起要用 `toggleSidebar`，展开/设置宽度用 `setSidebar`。插件把宽度和悬停/pin 状态存进 localStorage；加载时若悬停模式开启就收起到图标条，pin 固定则恢复宽度。`document` 的 `pointermove` 从图标条展开，并在指针离开时安排收起，但拖拽条在用或任意菜单/浮层打开时保持展开；标题栏的 pin 切换模式。frame 的 React action bag 和 pin 都是内部接缝；缺失时功能自动失效。
 
 如果以后 DSH 改了 CSS Module 的类名，插件会回退到“时钟用行内第三个直接 `<span>`、标题用第二个直接 `<span>`”；如果整行结构都变了，它只会失效（变成 no-op），不会破坏行内容。排序/筛选同样只在结构匹配时生效。
 
